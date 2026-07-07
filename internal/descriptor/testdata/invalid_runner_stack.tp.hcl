@@ -1,0 +1,3 @@
+stack "eks" {
+  runner = "pulumi"
+}

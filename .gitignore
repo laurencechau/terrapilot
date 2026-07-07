@@ -1,0 +1,6 @@
+bin/
+
+.claude/settings.local.json
+
+docs
+mkdocs.yml
