@@ -4,7 +4,7 @@ Website: https://terrapilot.sh
 License: MIT
 ---
 
-> **Work in progress** — core stack orchestration (`terrapilot run`, `terrapilot list`) is functional. Template syncing (`terrapilot sync`) is not yet implemented.
+> **Work in progress** — core features (`terrapilot run`, `terrapilot list`, `terrapilot sync`) are functional.
 
 # terrapilot
 
@@ -39,25 +39,29 @@ Add a `.terrapilot.hcl` at your project root — terrapilot walks up from the cu
 
 ```
 cloud-resources/
-  .terrapilot.hcl          ← marks the project root, run terrapilot from anywhere
-  modules/
-  stacks/
-    dev/
-      env.tfvars           ← environment-level vars (env, account ID, etc.)
-      ap-southeast-1/
-        region.tfvars      ← region-level vars (region, availability zones, etc.)
-        eks/
-          main.tf
-          backend.tf
-          variables.tf
-          outputs.tf
-          stack.tp.hcl     ← stack "eks"
-        networking/
-          main.tf
-          backend.tf
-          variables.tf
-          outputs.tf
-          stack.tp.hcl     ← stack "networking"
+├── .terrapilot.hcl                ← marks the project root, run terrapilot from anywhere
+├── modules/
+└── stacks/
+    ├── dev/
+    │   ├── env.tfvars             ← environment-level vars (env, account ID, etc.)
+    │   └── ap-southeast-1/
+    │       ├── region.tfvars      ← region-level vars (region, availability zones, etc.)
+    │       ├── eks/
+    │       │   ├── main.tf
+    │       │   └── stack.tp.hcl   ← stack "eks"
+    │       └── networking/
+    │           ├── main.tf
+    │           └── stack.tp.hcl   ← stack "networking"
+    └── prod/
+        ├── env.tfvars
+        └── ap-southeast-1/
+            ├── region.tfvars
+            ├── eks/
+            │   ├── main.tf
+            │   └── stack.tp.hcl   ← stack "eks"
+            └── networking/
+                ├── main.tf
+                └── stack.tp.hcl   ← stack "networking"
 ```
 
 ```hcl
@@ -71,10 +75,9 @@ stack "eks" {
 }
 
 depends_on {
-  stack "networking" {
-    mock_outputs = {                                # mock values for planning without upstream state
-      vpc_id = "vpc-mock-12345"
-    }
+  path         = "../networking"
+  mock_outputs = {                                  # mock values for planning without upstream state
+    vpc_id = "vpc-mock-12345"
   }
 }
 
@@ -93,6 +96,24 @@ terrapilot run plan                  # plan all stacks in dependency order
 terrapilot run apply                 # apply all stacks in dependency order
 terrapilot run plan --tag production # target stacks by tag
 ```
+
+---
+
+## Editor setup
+
+### VS Code
+
+The Terraform/OpenTofu language server will flag `.tp.hcl` files with errors since it doesn't know the terrapilot schema. Add this to your project's `.vscode/settings.json` to silence it:
+
+```json
+{
+  "files.associations": {
+    "*.tp.hcl": "hcl"
+  }
+}
+```
+
+This maps `.tp.hcl` to generic HCL so you keep syntax highlighting without the false errors.
 
 ---
 
