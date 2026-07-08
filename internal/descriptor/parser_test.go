@@ -5,6 +5,25 @@ import (
 	"testing"
 )
 
+func TestResolvePath(t *testing.T) {
+	cases := []struct {
+		path     string
+		stackDir string
+		root     string
+		want     string
+	}{
+		{"../networking", "/root/stacks/dev/eks", "/root", "/root/stacks/dev/networking"},
+		{"//shared/backend.tf.tpl", "/root/stacks/dev/eks", "/root", "/root/shared/backend.tf.tpl"},
+		{"//stacks/dev/env.tfvars", "/root/stacks/dev/eks", "/root", "/root/stacks/dev/env.tfvars"},
+	}
+	for _, c := range cases {
+		got := ResolvePath(c.path, c.stackDir, c.root)
+		if got != c.want {
+			t.Errorf("ResolvePath(%q): want %q, got %q", c.path, c.want, got)
+		}
+	}
+}
+
 func TestParse_Valid(t *testing.T) {
 	stack, err := Parse("testdata/stack.tp.hcl")
 	if err != nil {

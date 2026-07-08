@@ -11,8 +11,10 @@ type Stack struct {
 	DependsOn   []Dependency
 	Meta        map[string]string // compile-time only, for template rendering
 	Imports     []string
-	// Dir is the directory containing the .tp.hcl file.
+	// Dir is the absolute directory containing the .tp.hcl file.
 	Dir string
+	// Root is the absolute project root (directory containing .terrapilot.hcl or .git).
+	Root string
 }
 
 // Dependency represents a single upstream stack declared in the depends_on block.

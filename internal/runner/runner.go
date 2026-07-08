@@ -24,7 +24,7 @@ func Run(stacks []*descriptor.Stack, args []string, tags []string) error {
 			return fmt.Errorf("stack %q: %w", s.Name, err)
 		}
 
-		cmdArgs := append(args, varFileFlags(s.VarFiles)...)
+		cmdArgs := append(args, varFileFlags(s)...)
 		fmt.Printf("[terrapilot] running %s: %s %v\n", s.Name, bin, args)
 
 		cmd := exec.Command(bin, cmdArgs...)
@@ -52,10 +52,11 @@ func resolveBinary(runner string) (string, error) {
 	return "", fmt.Errorf("neither 'tofu' nor 'terraform' found in PATH")
 }
 
-func varFileFlags(files []string) []string {
-	flags := make([]string, 0, len(files)*2)
-	for _, f := range files {
-		flags = append(flags, "-var-file="+f)
+func varFileFlags(s *descriptor.Stack) []string {
+	flags := make([]string, 0, len(s.VarFiles)*2)
+	for _, f := range s.VarFiles {
+		abs := descriptor.ResolvePath(f, s.Dir, s.Root)
+		flags = append(flags, "-var-file="+abs)
 	}
 	return flags
 }

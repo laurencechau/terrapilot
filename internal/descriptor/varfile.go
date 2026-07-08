@@ -2,7 +2,6 @@ package descriptor
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -48,7 +47,7 @@ func ResolveTemplateContext(s *Stack) (map[string]string, error) {
 	ctx := make(map[string]string)
 
 	for _, rel := range s.VarFiles {
-		abs := filepath.Join(s.Dir, rel)
+		abs := ResolvePath(rel, s.Dir, s.Root)
 		vals, err := parseVarFile(abs)
 		if err != nil {
 			return nil, err

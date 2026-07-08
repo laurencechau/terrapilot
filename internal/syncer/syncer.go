@@ -27,10 +27,7 @@ func Sync(stacks []*descriptor.Stack) error {
 		}
 
 		for _, tplPath := range s.Imports {
-			abs := tplPath
-			if !filepath.IsAbs(tplPath) {
-				abs = filepath.Join(s.Dir, tplPath)
-			}
+			abs := descriptor.ResolvePath(tplPath, s.Dir, s.Root)
 			if err := renderTemplate(abs, s.Dir, ctx); err != nil {
 				return fmt.Errorf("stack %q: %w", s.Name, err)
 			}

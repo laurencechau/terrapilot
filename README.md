@@ -70,7 +70,7 @@ stack "eks" {
   description = "EKS cluster for production"
   runner      = "tofu"                              # "terraform" or "tofu" (default: auto-detect)
   enabled     = true                                # set false to skip without deleting this file
-  var_files   = ["../../env.tfvars", "eks.tfvars"]  # passed to terraform/tofu at runtime
+  var_files   = ["//stacks/dev/env.tfvars"]         # // = project root, or use relative paths
   tags        = ["production", "ap-southeast-1"]
 }
 
@@ -86,7 +86,7 @@ meta {
 }
 
 import {
-  files = ["../../../../modules/backend.tf.tpl"]   # shared HCL templates to sync into this stack
+  files = ["//modules/backend.tf.tpl"]              # // = project root, or use relative paths
 }
 ```
 

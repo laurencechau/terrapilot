@@ -33,6 +33,7 @@ func Discover(root string) ([]*Stack, error) {
 		if err != nil {
 			return err
 		}
+		s.Root = absRoot
 
 		inherited, err := InheritMeta(absRoot, s.Dir)
 		if err != nil {
