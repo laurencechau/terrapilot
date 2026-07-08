@@ -2,7 +2,6 @@ package descriptor
 
 import (
 	"github.com/hashicorp/hcl/v2"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // stackSchema defines the schema for the stack "<name>" block.
@@ -10,10 +9,11 @@ var stackSchema = &hcl.BodySchema{
 	Blocks: []hcl.BlockHeaderSchema{
 		{Type: "stack", LabelNames: []string{"name"}},
 		{Type: "depends_on"},
-		{Type: "locals"},
+		{Type: "meta"},
 		{Type: "import"},
 	},
 }
+// depends_on blocks are repeatable.
 
 // stackBodySchema defines attributes inside the stack block.
 var stackBodySchema = &hcl.BodySchema{
@@ -26,16 +26,10 @@ var stackBodySchema = &hcl.BodySchema{
 	},
 }
 
-// dependsOnSchema defines the schema inside depends_on block.
+// dependsOnSchema defines the schema inside a depends_on block.
 var dependsOnSchema = &hcl.BodySchema{
-	Blocks: []hcl.BlockHeaderSchema{
-		{Type: "stack", LabelNames: []string{"name"}},
-	},
-}
-
-// dependsOnStackSchema defines attributes inside a depends_on > stack block.
-var dependsOnStackSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
+		{Name: "path", Required: true},
 		{Name: "mock_outputs", Required: false},
 	},
 }
@@ -53,5 +47,3 @@ var validRunners = map[string]bool{
 	"tofu":      true,
 }
 
-// ctyStringList is a helper cty type for list(string).
-var ctyStringList = cty.List(cty.String)

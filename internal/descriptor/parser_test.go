@@ -1,6 +1,7 @@
 package descriptor
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -31,14 +32,15 @@ func TestParse_Valid(t *testing.T) {
 	if len(stack.DependsOn) != 2 {
 		t.Errorf("depends_on: want 2, got %d", len(stack.DependsOn))
 	}
-	if stack.DependsOn[0].Name != "vpc" {
-		t.Errorf("depends_on[0].name: want %q, got %q", "vpc", stack.DependsOn[0].Name)
+	wantVPCPath, _ := filepath.Abs("vpc")
+	if stack.DependsOn[0].Path != wantVPCPath {
+		t.Errorf("depends_on[0].path: want %q, got %q", wantVPCPath, stack.DependsOn[0].Path)
 	}
 	if stack.DependsOn[0].MockOutputs["vpc_id"] != "vpc-mock-12345" {
 		t.Errorf("mock_outputs vpc_id: want %q, got %q", "vpc-mock-12345", stack.DependsOn[0].MockOutputs["vpc_id"])
 	}
-	if stack.Locals["aws_region"] != "us-east-1" {
-		t.Errorf("locals aws_region: want %q, got %q", "us-east-1", stack.Locals["aws_region"])
+	if stack.Meta["aws_region"] != "us-east-1" {
+		t.Errorf("meta aws_region: want %q, got %q", "us-east-1", stack.Meta["aws_region"])
 	}
 	if len(stack.Imports) != 2 {
 		t.Errorf("imports: want 2, got %d", len(stack.Imports))
@@ -72,5 +74,54 @@ func TestParse_InvalidRunner(t *testing.T) {
 	_, err := Parse("testdata/invalid_runner_stack.tp.hcl")
 	if err == nil {
 		t.Fatal("expected error for invalid runner, got nil")
+	}
+}
+
+func TestResolveTemplateContext(t *testing.T) {
+	stack, err := Parse("testdata/varfile_stack/stack.tp.hcl")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctx, err := ResolveTemplateContext(stack)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// region comes from var_files
+	if ctx["region"] != "ap-southeast-1" {
+		t.Errorf("region: want %q, got %q", "ap-southeast-1", ctx["region"])
+	}
+	// env is overridden by meta
+	if ctx["env"] != "override" {
+		t.Errorf("env: want %q, got %q", "override", ctx["env"])
+	}
+	// backend_key comes from meta
+	if ctx["backend_key"] != "dev/eks/terraform.tfstate" {
+		t.Errorf("backend_key: want %q, got %q", "dev/eks/terraform.tfstate", ctx["backend_key"])
+	}
+	// count (number) should be skipped
+	if _, ok := ctx["count"]; ok {
+		t.Error("count should be skipped — not a string value")
+	}
+}
+
+func TestDiscover_LocalsInheritance(t *testing.T) {
+	stacks, err := Discover("testdata/locals_inherit")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(stacks) != 1 {
+		t.Fatalf("want 1 stack, got %d", len(stacks))
+	}
+
+	s := stacks[0]
+	// project comes from root locals.tp.hcl
+	if s.Meta["project"] != "myproject" {
+		t.Errorf("meta.project: want %q, got %q", "myproject", s.Meta["project"])
+	}
+	// env overridden by dev/locals.tp.hcl
+	if s.Meta["env"] != "dev" {
+		t.Errorf("meta.env: want %q, got %q", "dev", s.Meta["env"])
 	}
 }

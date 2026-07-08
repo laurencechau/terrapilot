@@ -17,12 +17,17 @@ func Parse(path string) (*Stack, error) {
 		return nil, err
 	}
 
-	file, diags := hclsyntax.ParseConfig(src, path, hcl.Pos{Line: 1, Column: 1})
-	if diags.HasErrors() {
-		return nil, fmt.Errorf("HCL parse error in %s: %w", path, diags)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("resolving path %s: %w", path, err)
 	}
 
-	return decode(file.Body, path)
+	file, diags := hclsyntax.ParseConfig(src, absPath, hcl.Pos{Line: 1, Column: 1})
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("HCL parse error in %s: %w", absPath, diags)
+	}
+
+	return decode(file.Body, absPath)
 }
 
 func decode(body hcl.Body, path string) (*Stack, error) {
@@ -42,7 +47,7 @@ func decode(body hcl.Body, path string) (*Stack, error) {
 	if err := decodeDependsOn(content, stack, path); err != nil {
 		return nil, err
 	}
-	if err := decodeLocals(content, stack, path); err != nil {
+	if err := decodeMeta(content, stack, path); err != nil {
 		return nil, err
 	}
 	if err := decodeImport(content, stack, path); err != nil {
@@ -127,27 +132,27 @@ func decodeDependsOn(content *hcl.BodyContent, stack *Stack, path string) error 
 	if len(blocks) == 0 {
 		return nil
 	}
-	if len(blocks) > 1 {
-		return fmt.Errorf("%s: only one depends_on block is allowed", path)
-	}
 
-	inner, diags := blocks[0].Body.Content(dependsOnSchema)
-	if diags.HasErrors() {
-		return fmt.Errorf("depends_on error in %s: %w", path, diags)
-	}
-
-	for _, depBlock := range inner.Blocks.OfType("stack") {
-		dep := Dependency{Name: depBlock.Labels[0]}
-
-		depContent, diags := depBlock.Body.Content(dependsOnStackSchema)
+	for _, block := range blocks {
+		inner, diags := block.Body.Content(dependsOnSchema)
 		if diags.HasErrors() {
-			return fmt.Errorf("depends_on stack %q error in %s: %w", dep.Name, path, diags)
+			return fmt.Errorf("depends_on error in %s: %w", path, diags)
 		}
 
-		if attr, ok := depContent.Attributes["mock_outputs"]; ok {
+		pathAttr := inner.Attributes["path"]
+		val, diags := pathAttr.Expr.Value(nil)
+		if diags.HasErrors() {
+			return fmt.Errorf("depends_on path error in %s: %w", path, diags)
+		}
+
+		dep := Dependency{
+			Path: filepath.Clean(filepath.Join(filepath.Dir(path), val.AsString())),
+		}
+
+		if attr, ok := inner.Attributes["mock_outputs"]; ok {
 			val, diags := attr.Expr.Value(nil)
 			if diags.HasErrors() {
-				return fmt.Errorf("mock_outputs error in %s: %w", path, diags)
+				return fmt.Errorf("depends_on mock_outputs error in %s: %w", path, diags)
 			}
 			dep.MockOutputs = make(map[string]string)
 			for it := val.ElementIterator(); it.Next(); {
@@ -162,27 +167,27 @@ func decodeDependsOn(content *hcl.BodyContent, stack *Stack, path string) error 
 	return nil
 }
 
-func decodeLocals(content *hcl.BodyContent, stack *Stack, path string) error {
-	blocks := content.Blocks.OfType("locals")
+func decodeMeta(content *hcl.BodyContent, stack *Stack, path string) error {
+	blocks := content.Blocks.OfType("meta")
 	if len(blocks) == 0 {
 		return nil
 	}
 	if len(blocks) > 1 {
-		return fmt.Errorf("%s: only one locals block is allowed", path)
+		return fmt.Errorf("%s: only one meta block is allowed", path)
 	}
 
 	attrs, diags := blocks[0].Body.JustAttributes()
 	if diags.HasErrors() {
-		return fmt.Errorf("locals error in %s: %w", path, diags)
+		return fmt.Errorf("meta error in %s: %w", path, diags)
 	}
 
-	stack.Locals = make(map[string]string)
+	stack.Meta = make(map[string]string)
 	for name, attr := range attrs {
 		val, diags := attr.Expr.Value(nil)
 		if diags.HasErrors() {
-			return fmt.Errorf("locals.%s error in %s: %w", name, path, diags)
+			return fmt.Errorf("meta.%s error in %s: %w", name, path, diags)
 		}
-		stack.Locals[name] = val.AsString()
+		stack.Meta[name] = val.AsString()
 	}
 
 	return nil

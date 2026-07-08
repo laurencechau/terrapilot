@@ -7,16 +7,18 @@ stack "eks" {
 }
 
 depends_on {
-  stack "vpc" {
-    mock_outputs = {
-      vpc_id     = "vpc-mock-12345"
-      subnet_ids = "subnet-mock-1"
-    }
+  path = "../vpc"
+  mock_outputs = {
+    vpc_id     = "vpc-mock-12345"
+    subnet_ids = "subnet-mock-1"
   }
-  stack "networking" {}
 }
 
-locals {
+depends_on {
+  path = "../networking"
+}
+
+meta {
   key        = "eks/terraform.tfstate"
   aws_region = "us-east-1"
 }

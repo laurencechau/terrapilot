@@ -8,9 +8,9 @@ import (
 
 func TestBuild_Order(t *testing.T) {
 	stacks := []*descriptor.Stack{
-		{Name: "app", DependsOn: []descriptor.Dependency{{Name: "vpc"}}},
-		{Name: "vpc", DependsOn: []descriptor.Dependency{{Name: "networking"}}},
-		{Name: "networking"},
+		{Name: "app", Dir: "/root/app", DependsOn: []descriptor.Dependency{{Path: "/root/vpc"}}},
+		{Name: "vpc", Dir: "/root/vpc", DependsOn: []descriptor.Dependency{{Path: "/root/networking"}}},
+		{Name: "networking", Dir: "/root/networking"},
 	}
 
 	sorted, err := Build(stacks)
@@ -28,8 +28,8 @@ func TestBuild_Order(t *testing.T) {
 
 func TestBuild_Cycle(t *testing.T) {
 	stacks := []*descriptor.Stack{
-		{Name: "a", DependsOn: []descriptor.Dependency{{Name: "b"}}},
-		{Name: "b", DependsOn: []descriptor.Dependency{{Name: "a"}}},
+		{Name: "a", Dir: "/root/a", DependsOn: []descriptor.Dependency{{Path: "/root/b"}}},
+		{Name: "b", Dir: "/root/b", DependsOn: []descriptor.Dependency{{Path: "/root/a"}}},
 	}
 
 	_, err := Build(stacks)
@@ -40,7 +40,7 @@ func TestBuild_Cycle(t *testing.T) {
 
 func TestBuild_MissingDep(t *testing.T) {
 	stacks := []*descriptor.Stack{
-		{Name: "app", DependsOn: []descriptor.Dependency{{Name: "ghost"}}},
+		{Name: "app", Dir: "/root/app", DependsOn: []descriptor.Dependency{{Path: "/root/ghost"}}},
 	}
 
 	_, err := Build(stacks)
@@ -51,8 +51,8 @@ func TestBuild_MissingDep(t *testing.T) {
 
 func TestBuild_NoDeps(t *testing.T) {
 	stacks := []*descriptor.Stack{
-		{Name: "a"},
-		{Name: "b"},
+		{Name: "a", Dir: "/root/a"},
+		{Name: "b", Dir: "/root/b"},
 	}
 
 	sorted, err := Build(stacks)
@@ -61,5 +61,17 @@ func TestBuild_NoDeps(t *testing.T) {
 	}
 	if len(sorted) != 2 {
 		t.Errorf("want 2 stacks, got %d", len(sorted))
+	}
+}
+
+func TestBuild_DuplicateDir(t *testing.T) {
+	stacks := []*descriptor.Stack{
+		{Name: "eks", Dir: "/root/eks"},
+		{Name: "eks-copy", Dir: "/root/eks"},
+	}
+
+	_, err := Build(stacks)
+	if err == nil {
+		t.Fatal("expected duplicate directory error, got nil")
 	}
 }

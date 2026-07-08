@@ -9,14 +9,15 @@ type Stack struct {
 	VarFiles    []string
 	Tags        []string
 	DependsOn   []Dependency
-	Locals      map[string]string
+	Meta        map[string]string // compile-time only, for template rendering
 	Imports     []string
 	// Dir is the directory containing the .tp.hcl file.
 	Dir string
 }
 
 // Dependency represents a single upstream stack declared in the depends_on block.
+// Path is relative to the stack's own directory.
 type Dependency struct {
-	Name        string
+	Path        string
 	MockOutputs map[string]string
 }
