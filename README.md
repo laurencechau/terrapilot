@@ -81,7 +81,7 @@ depends_on {
   }
 }
 
-locals {
+meta {
   key = "dev/ap-southeast-1/eks/terraform.tfstate" # compile-time values for template rendering
 }
 
